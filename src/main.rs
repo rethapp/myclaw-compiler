@@ -1,6 +1,6 @@
 on
 {
-  "skill_name": "List Files in C:\\tmp",
+  "skill_name": "Get Latest News",
   "skill_type": "js",
-  "description": "Lists all files in the C:\\tmp directory."
+  "description": "Grabs the top 3 news articles from Repubblica.it"
 }
