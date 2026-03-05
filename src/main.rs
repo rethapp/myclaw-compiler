@@ -1,24 +1,24 @@
 use reqwest;
 use serde_json::Value;
 
-#[derive(serde::Deserialize)]
-struct NewsItem {
-    title: String,
-    link: String,
-    pub_date: String,
-}
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let url = "https://repubblica.it/rss/ultima-notizia.xml";
+    let response = reqwest::get(url)?;
+    let news: Value = response.json()?;
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://repubblica.it/api/v2/news";
-    let response = reqwest::get(url).await?;
-    let news: Vec<NewsItem> = response.json().await?;
+    let mut latest_news = vec![];
+    for item in news["rss"]["channel"]["item"].as_array().unwrap() {
+        let title = item["title"].as_str().unwrap();
+        let link = item["link"].as_str().unwrap();
+        latest_news.push((title, link));
+    }
 
-    println!("Latest News:");
-    for (i, news_item) in news.iter().enumerate().take(3) {
-        println!("#{} {} - {}", i + 1, news_item.title, news_item.pub_date);
-        println!("Link: {}", news_item.link);
-        println!();
+    for (i, (title, link)) in latest_news.iter().enumerate() {
+        println!("{}. {}", i + 1, title);
+        println!("Link: {}", link);
+        if i == 2 {
+            break;
+        }
     }
 
     Ok(())
