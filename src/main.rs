@@ -1,24 +1,38 @@
-use reqwest;
-use serde_json::Value;
+use std::fs;
+use std::net::TcpStream;
+use std::io::{self, Read, Write};
+use std::time::Duration;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let url = "https://repubblica.it/rss/ultima-notizia.xml";
-    let response = reqwest::get(url)?;
-    let news: Value = response.json()?;
+#[tokio::main]
+async fn main() -> io::Result<()> {
+    let mut stream = TcpStream::connect("repubblica.it:80").await?;
+    stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+    stream.set_write_timeout(Some(Duration::from_secs(5)))?;
 
-    let mut latest_news = vec![];
-    for item in news["rss"]["channel"]["item"].as_array().unwrap() {
-        let title = item["title"].as_str().unwrap();
-        let link = item["link"].as_str().unwrap();
-        latest_news.push((title, link));
-    }
+    let request = format!(
+        "GET / HTTP/1.1\r\nHost: repubblica.it\r\nConnection: close\r\n\r\n"
+    );
 
-    for (i, (title, link)) in latest_news.iter().enumerate() {
-        println!("{}. {}", i + 1, title);
-        println!("Link: {}", link);
-        if i == 2 {
+    stream.write_all(request.as_bytes()).await?;
+
+    let mut response = String::new();
+    stream.read_to_string(&mut response).await?;
+
+    let mut news = Vec::new();
+    let mut lines = response.lines();
+
+    while let Some(line) = lines.next() {
+        if line.starts_with("<title>") {
+            let title = line.replace("<title>", "").replace("</title>", "");
+            news.push(title);
+        }
+        if news.len() == 3 {
             break;
         }
+    }
+
+    for (i, news) in news.iter().enumerate() {
+        println!("{}. {}", i + 1, news);
     }
 
     Ok(())
